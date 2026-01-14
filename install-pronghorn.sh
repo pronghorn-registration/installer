@@ -230,7 +230,7 @@ phase_setup() {
         warn "Phase 2 should run as a regular user, not root."
         warn "This ensures GitHub credentials are stored in your home directory."
         echo ""
-        read -p "Continue as root anyway? [y/N]: " -r
+        read -p "Continue as root anyway? [y/N]: " -r < /dev/tty
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             echo "Run without sudo: curl -fsSL $INSTALLER_URL | bash"
             exit 0
@@ -285,7 +285,7 @@ setup_ghcr_auth() {
         echo "  1. Browser authentication (recommended)"
         echo "  2. Personal Access Token (for headless servers)"
         echo ""
-        read -p "Choose [1/2]: " -r auth_choice
+        read -p "Choose [1/2]: " -r auth_choice < /dev/tty
 
         case "$auth_choice" in
             2)
@@ -293,7 +293,7 @@ setup_ghcr_auth() {
                 echo "Create a token at: https://github.com/settings/tokens/new"
                 echo "Required scopes: read:packages, write:packages"
                 echo ""
-                read -sp "Enter token: " gh_token
+                read -sp "Enter token: " gh_token < /dev/tty
                 echo ""
                 echo "$gh_token" | gh auth login --with-token
                 success "Authenticated with PAT"
