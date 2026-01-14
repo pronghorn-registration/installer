@@ -16,7 +16,7 @@ set -euo pipefail
 
 # Configuration
 INSTALL_DIR="/opt/pronghorn"
-REPO_RAW_URL="https://raw.githubusercontent.com/pronghorn-registration/installer/main"
+GITHUB_REPO="pronghorn-registration/pronghorn"
 GHCR_IMAGE="ghcr.io/pronghorn-registration/pronghorn:latest"
 
 # Colour output
@@ -323,9 +323,10 @@ setup_ghcr_auth() {
 download_files() {
     info "Downloading configuration files..."
 
-    # Download docker-compose.prod.yml
+    # Download docker-compose.prod.yml from private repo (requires gh auth)
     if [[ ! -f "docker-compose.prod.yml" ]]; then
-        curl -fsSL "$REPO_RAW_URL/docker-compose.prod.yml" -o docker-compose.prod.yml
+        info "Fetching docker-compose.prod.yml from $GITHUB_REPO..."
+        gh api "repos/$GITHUB_REPO/contents/docker-compose.prod.yml" --jq '.content' | base64 -d > docker-compose.prod.yml
         success "Downloaded docker-compose.prod.yml"
     else
         success "docker-compose.prod.yml exists"
