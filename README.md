@@ -19,6 +19,7 @@ curl -fsSL https://raw.githubusercontent.com/pronghorn-registration/installer/ma
 ```
 
 The same script detects that dependencies are installed and proceeds to:
+
 - Authenticate with GitHub Container Registry
 - Download configuration files
 - Generate encryption keys and certificates
@@ -29,10 +30,10 @@ The same script detects that dependencies are installed and proceeds to:
 
 This is a **self-detecting two-phase installer**:
 
-| Phase | Run As | What It Does |
-|-------|--------|--------------|
-| 1 | `sudo` | Installs Docker, gh CLI, Watchtower, creates `/opt/pronghorn` |
-| 2 | Regular user | GHCR auth, downloads configs, starts containers, runs setup |
+| Phase | Run As       | What It Does                                                  |
+| ----- | ------------ | ------------------------------------------------------------- |
+| 1     | `sudo`       | Installs Docker, gh CLI, Watchtower, creates `/opt/pronghorn` |
+| 2     | Regular user | GHCR auth, downloads configs, starts containers, runs setup   |
 
 The script automatically detects which phase to run based on system state.
 
@@ -40,7 +41,7 @@ The script automatically detects which phase to run based on system state.
 
 - Ubuntu 24.04 LTS server (minimum 2GB RAM, 20GB disk)
 - Root or sudo access
-- GitHub account with access to `pronghorn-registration` organisation
+- GitHub account with access to `pronghorn-registration` organization
 
 ## Other Distributions
 
@@ -63,6 +64,7 @@ Currently only Ubuntu 24.04 LTS is supported. For other distributions:
 ```
 
 System components:
+
 - Docker Engine + Compose
 - GitHub CLI (for GHCR authentication)
 - Watchtower (automatic container updates)
@@ -70,6 +72,7 @@ System components:
 ## Post-Installation
 
 See the [main Pronghorn documentation](https://github.com/pronghorn-registration/pronghorn/blob/main/docs/INSTALLATION.md) for:
+
 - ILS credential configuration
 - SSL certificate installation
 - SAML certificate registration with Alberta.ca IAM

@@ -1,13 +1,5 @@
 services:
-    # Combined PHP-FPM + Nginx Application Server
     pronghorn:
-        build:
-            context: .
-            dockerfile: ./docker/app/Dockerfile
-            target: production
-            args:
-                FLUX_USERNAME: ${FLUX_USERNAME}
-                FLUX_LICENSE_KEY: ${FLUX_LICENSE_KEY}
         image: ghcr.io/pronghorn-registration/pronghorn:${TAG:-latest}
         ports:
             - "${HTTP_PORT:-80}:8080"
@@ -39,7 +31,6 @@ services:
             redis:
                 condition: service_healthy
 
-    # Redis for queues, cache, and sessions
     redis:
         image: redis:7-alpine
         command: redis-server --appendonly yes
@@ -53,25 +44,6 @@ services:
             interval: 10s
             timeout: 3s
             retries: 3
-
-    # Queue Worker (uncomment if using queues)
-    # queue:
-    #     image: ghcr.io/pronghorn-registration/pronghorn:${TAG:-latest}
-    #     command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
-    #     environment:
-    #         - AUTORUN_ENABLED=false
-    #     volumes:
-    #         - ./storage:/var/www/html/storage
-    #         - ./database:/var/www/html/database
-    #         - ./.env:/var/www/html/.env:ro
-    #     networks:
-    #         - app-network
-    #     restart: unless-stopped
-    #     depends_on:
-    #         pronghorn:
-    #             condition: service_healthy
-    #         redis:
-    #             condition: service_healthy
 
 networks:
     app-network:
