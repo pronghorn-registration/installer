@@ -238,7 +238,8 @@ phase_setup() {
             local tmpscript
             tmpscript=$(mktemp)
             curl -fsSL "$INSTALLER_URL" -o "$tmpscript"
-            chmod +x "$tmpscript"
+            chmod 755 "$tmpscript"
+            chown "$SUDO_USER" "$tmpscript"
             exec sudo -u "$SUDO_USER" bash "$tmpscript" < /dev/tty
         fi
         # Running as root directly (not via sudo)
