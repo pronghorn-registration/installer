@@ -1,0 +1,81 @@
+services:
+    # Combined PHP-FPM + Nginx Application Server
+    pronghorn:
+        build:
+            context: .
+            dockerfile: ./docker/app/Dockerfile
+            target: production
+            args:
+                FLUX_USERNAME: ${FLUX_USERNAME}
+                FLUX_LICENSE_KEY: ${FLUX_LICENSE_KEY}
+        image: ghcr.io/pronghorn-registration/pronghorn:${TAG:-latest}
+        ports:
+            - "${HTTP_PORT:-80}:8080"
+            - "${HTTPS_PORT:-443}:8443"
+        environment:
+            - APP_ENV=production
+            - SSL_MODE=full
+            - AUTORUN_ENABLED=true
+            - AUTORUN_LARAVEL_STORAGE_LINK=true
+            - AUTORUN_LARAVEL_OPTIMIZE=true
+            - AUTORUN_LARAVEL_MIGRATION=true
+            - HEALTHCHECK_PATH=/up
+        volumes:
+            - ./storage:/var/www/html/storage
+            - ./database:/var/www/html/database
+            - ./.env:/var/www/html/.env:ro
+            - ./docker/ssl/fullchain.pem:/etc/ssl/private/self-signed-web.crt:ro
+            - ./docker/ssl/privkey.pem:/etc/ssl/private/self-signed-web.key:ro
+        networks:
+            - app-network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-sf", "http://localhost:8080/up"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 45s
+        depends_on:
+            redis:
+                condition: service_healthy
+
+    # Redis for queues, cache, and sessions
+    redis:
+        image: redis:7-alpine
+        command: redis-server --appendonly yes
+        volumes:
+            - redis-data:/data
+        networks:
+            - app-network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 3s
+            retries: 3
+
+    # Queue Worker (uncomment if using queues)
+    # queue:
+    #     image: ghcr.io/pronghorn-registration/pronghorn:${TAG:-latest}
+    #     command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+    #     environment:
+    #         - AUTORUN_ENABLED=false
+    #     volumes:
+    #         - ./storage:/var/www/html/storage
+    #         - ./database:/var/www/html/database
+    #         - ./.env:/var/www/html/.env:ro
+    #     networks:
+    #         - app-network
+    #     restart: unless-stopped
+    #     depends_on:
+    #         pronghorn:
+    #             condition: service_healthy
+    #         redis:
+    #             condition: service_healthy
+
+networks:
+    app-network:
+        driver: bridge
+
+volumes:
+    redis-data:
