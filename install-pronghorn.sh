@@ -18,6 +18,7 @@ set -euo pipefail
 INSTALL_DIR="/opt/pronghorn"
 GITHUB_REPO="pronghorn-registration/pronghorn"
 GHCR_IMAGE="ghcr.io/pronghorn-registration/pronghorn:latest"
+INSTALLER_URL="https://raw.githubusercontent.com/pronghorn-registration/installer/main/install-pronghorn.sh"
 
 # Colour output
 RED='\033[0;31m'
@@ -69,7 +70,7 @@ phase_install() {
     # Check if running as root
     if [[ $EUID -ne 0 ]]; then
         error "Phase 1 requires root privileges."
-        error "Run with: curl -fsSL <url> | sudo bash"
+        error "Run with: curl -fsSL $INSTALLER_URL | sudo bash"
         exit 1
     fi
 
@@ -209,7 +210,7 @@ phase_install() {
     echo -e "${YELLOW}IMPORTANT: Log out and back in for docker group to take effect.${NC}"
     echo ""
     echo "Then run this script again (without sudo):"
-    echo -e "  ${CYAN}curl -fsSL <same-url> | bash${NC}"
+    echo -e "  ${CYAN}curl -fsSL $INSTALLER_URL | bash${NC}"
     echo ""
 }
 
@@ -226,7 +227,7 @@ phase_setup() {
         echo ""
         read -p "Continue as root anyway? [y/N]: " -r
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            echo "Run without sudo: curl -fsSL <url> | bash"
+            echo "Run without sudo: curl -fsSL $INSTALLER_URL | bash"
             exit 0
         fi
     fi
@@ -466,7 +467,7 @@ main() {
             echo "for your user to have docker access."
             echo ""
             echo "After logging back in, run this script again (without sudo):"
-            echo -e "  ${CYAN}curl -fsSL <url> | bash${NC}"
+            echo -e "  ${CYAN}curl -fsSL $INSTALLER_URL | bash${NC}"
             echo ""
             exit 0
             ;;
