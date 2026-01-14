@@ -14,6 +14,16 @@
 #
 set -euo pipefail
 
+# If being piped (stdin is not a terminal), save to temp file and re-execute
+# This ensures interactive prompts work properly
+if [[ ! -t 0 ]] && [[ -z "${PRONGHORN_REEXEC:-}" ]]; then
+    tmpscript=$(mktemp)
+    cat > "$tmpscript"
+    chmod +x "$tmpscript"
+    export PRONGHORN_REEXEC=1
+    exec bash "$tmpscript" "$@"
+fi
+
 # Configuration
 INSTALL_DIR="/opt/pronghorn"
 GITHUB_REPO="pronghorn-registration/pronghorn"
