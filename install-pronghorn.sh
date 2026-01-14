@@ -340,24 +340,27 @@ setup_ghcr_auth() {
         case "$auth_choice" in
             2)
                 echo ""
-                echo "Create a token at: https://github.com/settings/tokens/new"
-                echo "Required scopes: read:packages, write:packages"
+                echo "Create a Classic token at: https://github.com/settings/tokens/new"
+                echo "Required scopes: repo, read:packages, write:packages"
                 echo ""
                 read -sp "Enter token: " gh_token < /dev/tty
                 echo ""
-                echo "$gh_token" | gh auth login --with-token
+                echo "$gh_token" | gh auth login --with-token -h github.com
                 success "Authenticated with PAT"
                 ;;
             *)
                 info "Opening browser for GitHub authentication..."
-                gh auth login -h github.com -p https -w
+                info "Note: Copy the code shown, then manually open https://github.com/login/device"
+                gh auth login -h github.com -p https -w -s read:packages,write:packages
                 ;;
         esac
     fi
 
-    # Add package scopes
-    info "Adding package scopes..."
-    gh auth refresh -h github.com -s read:packages,write:packages 2>/dev/null || true
+    # Try to add package scopes if not already present (non-blocking)
+    # Skip if on headless server (no browser) to avoid hanging
+    if command -v xdg-open &>/dev/null || command -v open &>/dev/null; then
+        gh auth refresh -h github.com -s read:packages,write:packages 2>/dev/null || true
+    fi
 
     # Configure git identity if not already set
     configure_git_identity
