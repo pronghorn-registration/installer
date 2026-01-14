@@ -239,7 +239,7 @@ phase_setup() {
             tmpscript=$(mktemp)
             curl -fsSL "$INSTALLER_URL" -o "$tmpscript"
             chmod +x "$tmpscript"
-            exec sudo -u "$SUDO_USER" bash "$tmpscript"
+            exec sudo -u "$SUDO_USER" bash "$tmpscript" < /dev/tty
         fi
         # Running as root directly (not via sudo)
         warn "Phase 2 should run as a regular user, not root."
