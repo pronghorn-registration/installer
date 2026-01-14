@@ -94,15 +94,18 @@ phase_install() {
 
     info "Installing on Ubuntu $VERSION_ID for user: $REAL_USER"
 
+    # Suppress interactive prompts during package installation
+    export DEBIAN_FRONTEND=noninteractive
+
     # Update system
     info "Updating system packages..."
     apt-get update -qq
-    apt-get upgrade -y -qq
+    apt-get upgrade -y -qq -o Dpkg::Options::="--force-confold"
     success "System updated"
 
     # Install prerequisites
     info "Installing prerequisites..."
-    apt-get install -y -qq \
+    apt-get install -y -qq -o Dpkg::Options::="--force-confold" \
         curl \
         git \
         openssl \
@@ -131,7 +134,7 @@ phase_install() {
             tee /etc/apt/sources.list.d/docker.list > /dev/null
 
         apt-get update -qq
-        apt-get install -y -qq \
+        apt-get install -y -qq -o Dpkg::Options::="--force-confold" \
             docker-ce \
             docker-ce-cli \
             containerd.io \
@@ -166,7 +169,7 @@ phase_install() {
             tee /etc/apt/sources.list.d/github-cli.list > /dev/null
 
         apt-get update -qq
-        apt-get install -y -qq gh
+        apt-get install -y -qq -o Dpkg::Options::="--force-confold" gh
         success "GitHub CLI installed"
     fi
 
