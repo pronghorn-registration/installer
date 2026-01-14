@@ -237,10 +237,14 @@ phase_setup() {
             # Download to temp file so stdin is free for user input
             local tmpscript
             tmpscript=$(mktemp)
-            curl -fsSL "$INSTALLER_URL" -o "$tmpscript"
+            curl -fsSL "$INSTALLER_URL" -o "$tmpscript" || {
+                error "Failed to download installer script"
+                exit 1
+            }
             chmod 755 "$tmpscript"
-            chown "$SUDO_USER" "$tmpscript"
-            exec sudo -u "$SUDO_USER" bash "$tmpscript" < /dev/tty
+            chown "$SUDO_USER:$SUDO_USER" "$tmpscript"
+            # Use script(1) to provide a proper pseudo-terminal for interactive prompts
+            exec script -q -c "sudo -u '$SUDO_USER' -H bash '$tmpscript'" /dev/null
         fi
         # Running as root directly (not via sudo)
         warn "Phase 2 should run as a regular user, not root."
