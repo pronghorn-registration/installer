@@ -220,8 +220,13 @@ phase_install() {
 phase_setup() {
     header "Phase 2: Pronghorn Setup"
 
-    # Should NOT be root for this phase
+    # Should NOT be root for this phase - auto-drop privileges if possible
     if [[ $EUID -eq 0 ]]; then
+        if [[ -n "${SUDO_USER:-}" ]] && [[ "$SUDO_USER" != "root" ]]; then
+            info "Dropping privileges to '$SUDO_USER' for Phase 2..."
+            exec sudo -u "$SUDO_USER" -i bash -c "curl -fsSL '$INSTALLER_URL' | bash"
+        fi
+        # Running as root directly (not via sudo)
         warn "Phase 2 should run as a regular user, not root."
         warn "This ensures GitHub credentials are stored in your home directory."
         echo ""
