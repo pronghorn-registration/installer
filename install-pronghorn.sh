@@ -331,12 +331,6 @@ download_files() {
         success "docker-compose.prod.yml exists"
     fi
 
-    # Download .env.example
-    if [[ ! -f ".env.example" ]]; then
-        curl -fsSL "$REPO_RAW_URL/.env.example" -o .env.example
-        success "Downloaded .env.example"
-    fi
-
     # Create directories
     mkdir -p storage/certs storage/logs storage/framework/{sessions,views,cache/data}
     mkdir -p database docker/ssl
@@ -351,8 +345,6 @@ bootstrap_environment() {
 
     # Create .env if needed
     if [[ ! -f ".env" ]]; then
-        cp .env.example .env
-
         # Generate APP_KEY
         info "Generating APP_KEY..."
         local app_key
@@ -363,15 +355,26 @@ bootstrap_environment() {
             exit 1
         fi
 
-        # Update .env with production defaults
-        sed -i.bak "s|^APP_KEY=.*|APP_KEY=$app_key|" .env
-        sed -i.bak "s|^APP_ENV=.*|APP_ENV=production|" .env
-        sed -i.bak "s|^APP_DEBUG=.*|APP_DEBUG=false|" .env
-        sed -i.bak "s|^REDIS_HOST=.*|REDIS_HOST=redis|" .env
-        sed -i.bak "s|^CACHE_STORE=.*|CACHE_STORE=redis|" .env
-        sed -i.bak "s|^QUEUE_CONNECTION=.*|QUEUE_CONNECTION=redis|" .env
-        sed -i.bak "s|^SESSION_DRIVER=.*|SESSION_DRIVER=redis|" .env
-        rm -f .env.bak
+        # Create minimal .env with production defaults
+        cat > .env << EOF
+APP_NAME=Pronghorn
+APP_ENV=production
+APP_KEY=$app_key
+APP_DEBUG=false
+APP_URL=https://localhost
+
+INSTANCE_ID=default
+
+DB_CONNECTION=sqlite
+
+REDIS_HOST=redis
+REDIS_PORT=6379
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
+
+ILS_DRIVER=symphony
+EOF
 
         success "Environment configured with new APP_KEY"
     else
