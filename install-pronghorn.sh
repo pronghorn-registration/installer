@@ -285,6 +285,36 @@ phase_setup() {
 }
 
 # ============================================================================
+# Git Identity Configuration
+# ============================================================================
+configure_git_identity() {
+    # Check if git identity is already configured
+    if git config --global user.name &>/dev/null && git config --global user.email &>/dev/null; then
+        return 0
+    fi
+
+    info "Configuring git identity from GitHub account..."
+
+    local gh_name gh_email gh_login gh_id
+
+    # Get user info from GitHub
+    gh_login=$(gh api user --jq '.login' 2>/dev/null) || return 1
+    gh_name=$(gh api user --jq '.name // .login' 2>/dev/null) || return 1
+    gh_email=$(gh api user --jq '.email' 2>/dev/null)
+
+    # If email is null/private, use GitHub noreply email
+    if [[ -z "$gh_email" || "$gh_email" == "null" ]]; then
+        gh_id=$(gh api user --jq '.id' 2>/dev/null) || return 1
+        gh_email="${gh_id}+${gh_login}@users.noreply.github.com"
+    fi
+
+    # Configure git
+    git config --global user.name "$gh_name"
+    git config --global user.email "$gh_email"
+    success "Git configured as: $gh_name <$gh_email>"
+}
+
+# ============================================================================
 # GHCR Authentication
 # ============================================================================
 setup_ghcr_auth() {
@@ -328,6 +358,9 @@ setup_ghcr_auth() {
     # Add package scopes
     info "Adding package scopes..."
     gh auth refresh -h github.com -s read:packages,write:packages 2>/dev/null || true
+
+    # Configure git identity if not already set
+    configure_git_identity
 
     # Authenticate Docker with GHCR
     info "Authenticating Docker with GHCR..."
