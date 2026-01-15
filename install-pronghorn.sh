@@ -428,9 +428,11 @@ download_files() {
         success "docker-compose.prod.yml exists"
     fi
 
-    # Create directories
+    # Create directories and files
     mkdir -p storage/certs storage/logs storage/framework/{sessions,views,cache/data}
     mkdir -p database docker/ssl
+    # Create empty SQLite database file (mounted as single file, not directory)
+    touch database/database.sqlite
     success "Directories created"
 }
 
