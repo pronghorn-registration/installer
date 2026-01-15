@@ -521,28 +521,7 @@ run_artisan_setup() {
     # Give container a moment to fully initialize
     sleep 2
 
-    # Run migrations if needed
-    info "Running database migrations..."
-    docker exec pronghorn-pronghorn-1 php artisan migrate --force
-    success "Migrations complete"
-
-    # Check if admin user exists
-    local admin_count
-    admin_count=$(docker exec pronghorn-pronghorn-1 php artisan admin:list 2>/dev/null | grep -c "@" || echo "0")
-
-    if [[ "$admin_count" -gt 0 ]]; then
-        echo ""
-        warn "Admin user(s) already exist."
-        read -p "Create another admin user? [y/N]: " -r < /dev/tty
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            info "Skipping admin creation."
-            return 0
-        fi
-    fi
-
-    # Create admin user interactively
-    info "Creating admin user..."
-    docker exec -it pronghorn-pronghorn-1 php artisan admin:create
+    docker exec -it pronghorn-pronghorn-1 php artisan pronghorn:setup
 }
 
 # ============================================================================
