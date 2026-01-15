@@ -430,9 +430,9 @@ download_files() {
 
     # Create directories and files
     mkdir -p storage/certs storage/logs storage/framework/{sessions,views,cache/data}
-    mkdir -p database docker/ssl
-    # Create empty SQLite database file (mounted as single file, not directory)
-    touch database/database.sqlite
+    mkdir -p database-data docker/ssl
+    # Create empty SQLite database file
+    touch database-data/database.sqlite
     success "Directories created"
 }
 
@@ -551,6 +551,7 @@ APP_URL=$app_url
 INSTANCE_ID=$instance_id
 
 DB_CONNECTION=sqlite
+DB_DATABASE=database-data/database.sqlite
 
 REDIS_HOST=redis
 REDIS_PORT=6379
