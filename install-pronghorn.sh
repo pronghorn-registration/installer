@@ -458,6 +458,17 @@ EOF
         success "SSL certificates generated (self-signed)"
         warn "Replace with production certificates before going live"
     fi
+
+    # Generate SAML certificates if needed
+    if [[ ! -f "storage/certs/saml.crt" ]] || [[ ! -f "storage/certs/saml.key" ]]; then
+        info "Generating placeholder SAML certificates..."
+        openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+            -keyout storage/certs/saml.key \
+            -out storage/certs/saml.crt \
+            -subj "/CN=pronghorn-saml/O=Pronghorn/C=CA" \
+            2>/dev/null
+        success "SAML certificates generated (self-signed)"
+    fi
 }
 
 # ============================================================================
