@@ -411,38 +411,8 @@ bootstrap_environment() {
 
     # Create .env if needed
     if [[ ! -f ".env" ]]; then
-        # Generate APP_KEY
-        info "Generating APP_KEY..."
-        local app_key
-        app_key=$(docker run --rm --entrypoint php "$GHCR_IMAGE" artisan key:generate --show 2>/dev/null)
-
-        if [[ -z "$app_key" ]]; then
-            error "Failed to generate APP_KEY"
-            exit 1
-        fi
-
-        # Create minimal .env with production defaults
-        cat > .env << EOF
-APP_NAME=Pronghorn
-APP_ENV=production
-APP_KEY=$app_key
-APP_DEBUG=false
-APP_URL=https://localhost
-
-INSTANCE_ID=default
-
-DB_CONNECTION=sqlite
-
-REDIS_HOST=redis
-REDIS_PORT=6379
-CACHE_STORE=redis
-QUEUE_CONNECTION=redis
-SESSION_DRIVER=redis
-
-ILS_DRIVER=symphony
-EOF
-
-        success "Environment configured with new APP_KEY"
+        # Gather configuration interactively
+        configure_instance
     else
         success "Using existing .env"
     fi
@@ -469,6 +439,96 @@ EOF
             2>/dev/null
         success "SAML certificates generated (self-signed)"
     fi
+}
+
+# ============================================================================
+# Configure Instance (interactive)
+# ============================================================================
+configure_instance() {
+    header "Instance Configuration"
+
+    # Instance selection
+    echo "Available library system instances:"
+    echo ""
+    echo "  1) shortgrass        - Shortgrass Library System"
+    echo "  2) edmonton          - Edmonton Public Library"
+    echo "  3) reddeer           - Red Deer Public Library"
+    echo "  4) woodbuffalo       - Wood Buffalo Regional Library"
+    echo "  5) strathcona-fortsask - Strathcona County & Fort Saskatchewan"
+    echo "  6) northernlights    - Northern Lights Library System"
+    echo ""
+
+    local instance_choice instance_id
+    read -p "Select instance [1-6]: " instance_choice < /dev/tty
+
+    case "$instance_choice" in
+        1) instance_id="shortgrass" ;;
+        2) instance_id="edmonton" ;;
+        3) instance_id="reddeer" ;;
+        4) instance_id="woodbuffalo" ;;
+        5) instance_id="strathcona-fortsask" ;;
+        6) instance_id="northernlights" ;;
+        *) instance_id="shortgrass"; warn "Invalid choice, defaulting to shortgrass" ;;
+    esac
+
+    success "Selected: $instance_id"
+    echo ""
+
+    # APP_URL configuration
+    local app_url
+    read -p "Application URL (e.g., https://register.mylibrary.ca): " app_url < /dev/tty
+
+    # Validate URL
+    if [[ ! "$app_url" =~ ^https?:// ]]; then
+        app_url="https://$app_url"
+        warn "Added https:// prefix: $app_url"
+    fi
+
+    success "URL configured: $app_url"
+    echo ""
+
+    # Generate APP_KEY
+    info "Generating APP_KEY..."
+    local app_key
+    app_key=$(docker run --rm --entrypoint php "$GHCR_IMAGE" artisan key:generate --show 2>/dev/null)
+
+    if [[ -z "$app_key" ]]; then
+        error "Failed to generate APP_KEY"
+        exit 1
+    fi
+
+    # Create .env with all configuration
+    cat > .env << EOF
+APP_NAME=Pronghorn
+APP_ENV=production
+APP_KEY=$app_key
+APP_DEBUG=false
+APP_URL=$app_url
+
+INSTANCE_ID=$instance_id
+
+DB_CONNECTION=sqlite
+
+REDIS_HOST=redis
+REDIS_PORT=6379
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
+
+SAML_BASE_URL=$app_url
+
+ILS_DRIVER=symphony
+EOF
+
+    success "Environment configured"
+
+    # Show summary
+    echo ""
+    echo "Configuration summary:"
+    echo "  Instance:  $instance_id"
+    echo "  URL:       $app_url"
+    echo "  APP_KEY:   [generated]"
+    echo ""
 }
 
 # ============================================================================
@@ -516,11 +576,15 @@ start_containers() {
 # Run Artisan Setup
 # ============================================================================
 run_artisan_setup() {
-    header "Interactive Configuration"
+    header "Final Setup Steps"
+
+    info "Running artisan setup for SAML certificates, database seeding, and admin creation..."
+    echo ""
 
     # Give container a moment to fully initialize
     sleep 2
 
+    # Run setup - it will detect .env is read-only and skip env config
     docker exec -it pronghorn-pronghorn-1 php artisan pronghorn:setup
 }
 
