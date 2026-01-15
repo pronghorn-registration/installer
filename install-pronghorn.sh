@@ -320,14 +320,25 @@ configure_git_identity() {
 setup_ghcr_auth() {
     info "Setting up GitHub Container Registry authentication..."
 
-    # Check if already authenticated
+    # Check if BOTH Docker and gh CLI are authenticated
+    local docker_auth=false gh_auth=false
+
     if docker pull "$GHCR_IMAGE" &>/dev/null 2>&1; then
-        success "Already authenticated with GHCR"
+        docker_auth=true
+    fi
+
+    if gh auth status &>/dev/null 2>&1; then
+        gh_auth=true
+    fi
+
+    # If both are authenticated, we're done
+    if $docker_auth && $gh_auth; then
+        success "Already authenticated with GHCR and GitHub CLI"
         return 0
     fi
 
-    # Check GitHub CLI auth
-    if ! gh auth status &>/dev/null 2>&1; then
+    # Need to authenticate gh CLI
+    if ! $gh_auth; then
         echo ""
         echo "GitHub CLI needs authentication."
         echo ""
@@ -365,21 +376,25 @@ setup_ghcr_auth() {
     # Configure git identity if not already set
     configure_git_identity
 
-    # Authenticate Docker with GHCR
-    info "Authenticating Docker with GHCR..."
-    local gh_user
-    gh_user=$(gh api user --jq '.login' 2>/dev/null) || {
-        error "Could not determine GitHub username"
-        exit 1
-    }
+    # Authenticate Docker with GHCR if not already authenticated
+    if ! $docker_auth; then
+        info "Authenticating Docker with GHCR..."
+        local gh_user
+        gh_user=$(gh api user --jq '.login' 2>/dev/null) || {
+            error "Could not determine GitHub username"
+            exit 1
+        }
 
-    gh auth token | docker login ghcr.io -u "$gh_user" --password-stdin
-    success "Docker authenticated as $gh_user"
+        gh auth token | docker login ghcr.io -u "$gh_user" --password-stdin
+        success "Docker authenticated as $gh_user"
 
-    # Pull image
-    info "Pulling Pronghorn image..."
-    docker pull "$GHCR_IMAGE"
-    success "Image pulled"
+        # Pull image
+        info "Pulling Pronghorn image..."
+        docker pull "$GHCR_IMAGE"
+        success "Image pulled"
+    else
+        success "Docker already authenticated with GHCR"
+    fi
 }
 
 # ============================================================================
@@ -389,9 +404,25 @@ download_files() {
     info "Downloading configuration files..."
 
     # Download docker-compose.prod.yml from private repo (requires gh auth)
-    if [[ ! -f "docker-compose.prod.yml" ]]; then
+    if [[ ! -f "docker-compose.prod.yml" ]] || [[ ! -s "docker-compose.prod.yml" ]]; then
         info "Fetching docker-compose.prod.yml from $GITHUB_REPO..."
+
+        # Verify gh auth before attempting download
+        if ! gh auth status &>/dev/null; then
+            error "GitHub CLI not authenticated. Cannot download compose file."
+            error "Run: gh auth login -h github.com -p https -w"
+            exit 1
+        fi
+
         gh api "repos/$GITHUB_REPO/contents/docker-compose.prod.yml" --jq '.content' | base64 -d > docker-compose.prod.yml
+
+        # Verify download succeeded
+        if [[ ! -s "docker-compose.prod.yml" ]]; then
+            error "Failed to download docker-compose.prod.yml"
+            rm -f docker-compose.prod.yml
+            exit 1
+        fi
+
         success "Downloaded docker-compose.prod.yml"
     else
         success "docker-compose.prod.yml exists"
@@ -476,13 +507,23 @@ configure_instance() {
 
     # APP_URL configuration
     local app_url
-    read -p "Application URL (e.g., https://register.mylibrary.ca): " app_url < /dev/tty
+    while true; do
+        read -p "Application URL (e.g., https://register.mylibrary.ca): " app_url < /dev/tty
 
-    # Validate URL
-    if [[ ! "$app_url" =~ ^https?:// ]]; then
-        app_url="https://$app_url"
-        warn "Added https:// prefix: $app_url"
-    fi
+        # Require non-empty URL
+        if [[ -z "$app_url" ]]; then
+            warn "URL cannot be empty. Please enter a valid URL."
+            continue
+        fi
+
+        # Add https:// prefix if missing
+        if [[ ! "$app_url" =~ ^https?:// ]]; then
+            app_url="https://$app_url"
+            warn "Added https:// prefix: $app_url"
+        fi
+
+        break
+    done
 
     success "URL configured: $app_url"
     echo ""
