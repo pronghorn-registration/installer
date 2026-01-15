@@ -625,8 +625,15 @@ run_artisan_setup() {
     # Give container a moment to fully initialize
     sleep 2
 
-    # Run setup - it will detect .env is read-only and skip env config
-    docker exec -it pronghorn-pronghorn-1 php artisan pronghorn:setup
+    # Run setup - use script to ensure TTY is available for docker exec
+    # This is needed when running through privilege-drop via script(1)
+    if [[ -t 0 ]]; then
+        # stdin is a TTY, run directly
+        docker exec -it pronghorn-pronghorn-1 php artisan pronghorn:setup
+    else
+        # No TTY, use script to provide one
+        script -q -c "docker exec -it pronghorn-pronghorn-1 php artisan pronghorn:setup" /dev/null
+    fi
 }
 
 # ============================================================================
