@@ -477,7 +477,13 @@ EOF
 start_containers() {
     info "Starting containers..."
 
-    # Stop existing containers
+    # Check if containers are already running and healthy
+    if docker compose -f docker-compose.prod.yml ps 2>/dev/null | grep -q "(healthy)"; then
+        success "Containers are already running and healthy"
+        return 0
+    fi
+
+    # Stop existing containers if running but not healthy
     if docker compose -f docker-compose.prod.yml ps -q 2>/dev/null | grep -q .; then
         info "Stopping existing containers..."
         docker compose -f docker-compose.prod.yml down
@@ -510,6 +516,17 @@ start_containers() {
 # Run Artisan Setup
 # ============================================================================
 run_artisan_setup() {
+    # Check if setup has already been completed (database exists with tables)
+    if [[ -f "database/database.sqlite" ]] && [[ -s "database/database.sqlite" ]]; then
+        echo ""
+        warn "It looks like Pronghorn has already been configured."
+        read -p "Run interactive setup again? [y/N]: " -r < /dev/tty
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            info "Skipping setup. Your existing configuration is preserved."
+            return 0
+        fi
+    fi
+
     header "Interactive Configuration"
 
     # Give container a moment to fully initialize
